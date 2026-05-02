@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.hex
+*.elf
+.DS_Store
