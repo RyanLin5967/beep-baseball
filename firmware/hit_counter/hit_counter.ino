@@ -8,7 +8,7 @@
  *   A0  ADXL335 accelerometer, impact axis
  *   D13 status LED
  *
- * Output (Serial, 115200): hit_count
+ * Output (Serial, 115200): millis,hit_count,accel_peak
  */
 
 const uint8_t PIN_ACCEL = A0;
@@ -25,6 +25,13 @@ void setup() {
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, LOW);
   Serial.begin(115200);
+  Serial.println(F("# millis,hit_count,accel_peak"));
+}
+
+void logRow(unsigned long now, int peak) {
+  Serial.print(now);      Serial.print(',');
+  Serial.print(hitCount); Serial.print(',');
+  Serial.println(peak);
 }
 
 void loop() {
@@ -34,6 +41,6 @@ void loop() {
   if (peak > HIT_THRESHOLD && (now - lastHitMs) > HIT_DEBOUNCE_MS) {
     hitCount++;
     lastHitMs = now;
-    Serial.println(hitCount);
+    logRow(now, peak);
   }
 }
