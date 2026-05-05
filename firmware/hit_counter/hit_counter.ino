@@ -50,6 +50,13 @@ void setup() {
   digitalWrite(PIN_LED, LOW);
   Serial.begin(115200);
   Serial.println(F("# millis,hit_count,accel_peak,beeping"));
+  unsigned long t = millis();
+  lastBeepHeardMs = t;                    // assume beeping at start; don't fail instantly
+  // Place the hit/mic timers "in the past" so a hit in the first 150ms after reset still
+  // counts and the mic gate is open immediately. Unsigned wrap keeps the elapsed-time
+  // comparisons correct even though this underflows at t~0.
+  lastHitMs      = t - (HIT_DEBOUNCE_MS + 1);
+  lastMicCheckMs = t - (MIC_CHECK_INTERVAL_MS + 1);
 }
 
 // Sample mic AND accelerometer across the window so the accelerometer is never blind
