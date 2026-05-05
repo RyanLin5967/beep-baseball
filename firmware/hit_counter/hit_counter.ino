@@ -19,7 +19,11 @@ const uint8_t PIN_LED   = 13;
 
 const int   ACCEL_REST        = 512;   // measure your sensor's rest value
 const int   HIT_THRESHOLD     = 180;   // |accel - rest| above this counts as a hit
-const unsigned long HIT_DEBOUNCE_MS = 150; // ignore ringing after one hit
+const unsigned long HIT_DEBOUNCE_MS = 150; // ignore ringing after one hit (hit COUNTING)
+// Mic sensing only needs to skip the few-ms impact transient, NOT the full hit debounce.
+// If it used HIT_DEBOUNCE_MS, a rig hitting faster than every 150ms would keep refreshing
+// lastHitMs, the gate would never open, and beep failure would never be detected.
+const unsigned long MIC_SETTLE_MS = 30;
 
 const int   BEEP_FLOOR        = 40;    // mic peak-to-peak: ball ON vs OFF
 const unsigned long MIC_WINDOW_US = 2000; // mic sampling window
@@ -79,9 +83,10 @@ void loop() {
     countedHit = true;
   }
 
-  // Sense the beep only periodically; the mic read blocks ~MIC_WINDOW_US. Skip the brief
-  // chaos right at impact.
-  if (now - lastHitMs > HIT_DEBOUNCE_MS &&
+  // Sense the beep only periodically; the mic read blocks ~MIC_WINDOW_US. Skip only the
+  // brief MIC_SETTLE_MS impact transient, not the full hit debounce, so a fast/continuous
+  // rig still gets sensing windows between hits.
+  if (now - lastHitMs > MIC_SETTLE_MS &&
       now - lastMicCheckMs >= MIC_CHECK_INTERVAL_MS) {
     lastMicCheckMs = now;
     if (isBeeping()) {
