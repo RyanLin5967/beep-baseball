@@ -23,7 +23,9 @@ const unsigned long HIT_DEBOUNCE_MS = 150; // ignore ringing after one hit
 
 const int   BEEP_FLOOR        = 40;    // mic peak-to-peak: ball ON vs OFF
 const unsigned long MIC_WINDOW_US = 2000; // mic sampling window
-const int   SILENCE_STREAK_TO_FAIL = 5;   // consecutive silent checks -> beep dead
+// How long the beep must stay silent before we call it dead (reject a momentary dropout
+// during impact). Time-based, so it doesn't drift with loop speed.
+const unsigned long BEEP_LOST_MS = 300;
 // The mic check blocks for MIC_WINDOW_US. If we ran it every loop the accelerometer
 // would be sampled only once per ~2ms and would miss sub-ms impact spikes (undercount).
 // So poll accel every loop and only run the mic check this often.
@@ -32,7 +34,7 @@ const unsigned long MIC_CHECK_INTERVAL_MS = 50;
 unsigned long hitCount = 0;
 unsigned long lastHitMs = 0;
 unsigned long lastMicCheckMs = 0;
-int silenceStreak = 0;
+unsigned long lastBeepHeardMs = 0; // last time the beep was confirmed sounding
 bool beepLost = false;
 unsigned long failedAtHit = 0;
 
@@ -83,11 +85,9 @@ void loop() {
       now - lastMicCheckMs >= MIC_CHECK_INTERVAL_MS) {
     lastMicCheckMs = now;
     if (isBeeping()) {
-      silenceStreak = 0;
-    } else if (silenceStreak < 32767) {
-      silenceStreak++;
+      lastBeepHeardMs = now;
     }
-    if (!beepLost && silenceStreak >= SILENCE_STREAK_TO_FAIL) {
+    if (!beepLost && (now - lastBeepHeardMs) >= BEEP_LOST_MS) {
       beepLost = true;
       failedAtHit = hitCount;
       digitalWrite(PIN_LED, HIGH); // latch
