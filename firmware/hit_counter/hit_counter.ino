@@ -22,9 +22,13 @@ const unsigned long HIT_DEBOUNCE_MS = 150; // ignore ringing after one hit
 
 const int   BEEP_FLOOR        = 40;    // mic peak-to-peak: ball ON vs OFF
 const unsigned long MIC_WINDOW_US = 2000; // mic sampling window
+const int   SILENCE_STREAK_TO_FAIL = 5;   // consecutive silent checks -> beep dead
 
 unsigned long hitCount = 0;
 unsigned long lastHitMs = 0;
+int silenceStreak = 0;
+bool beepLost = false;
+unsigned long failedAtHit = 0;
 
 void setup() {
   pinMode(PIN_LED, OUTPUT);
@@ -59,11 +63,24 @@ void logRow(unsigned long now, int peak, bool beeping) {
 void loop() {
   unsigned long now = millis();
   int peak = abs(analogRead(PIN_ACCEL) - ACCEL_REST);
+
   bool beeping = isBeeping();
+  if (!beeping) {
+    if (silenceStreak < 32767) silenceStreak++;
+  } else {
+    silenceStreak = 0;
+  }
+  if (!beepLost && silenceStreak >= SILENCE_STREAK_TO_FAIL) {
+    beepLost = true;
+    failedAtHit = hitCount;
+    digitalWrite(PIN_LED, HIGH); // latch
+    Serial.print(F("# FAILURE at hit "));
+    Serial.println(failedAtHit);
+  }
 
   if (peak > HIT_THRESHOLD && (now - lastHitMs) > HIT_DEBOUNCE_MS) {
     hitCount++;
     lastHitMs = now;
-    logRow(now, peak, beeping);
+    logRow(now, peak, !beepLost);
   }
 }
