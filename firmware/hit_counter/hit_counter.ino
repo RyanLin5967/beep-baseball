@@ -26,7 +26,10 @@ const unsigned long HIT_DEBOUNCE_MS = 150; // ignore ringing after one hit (hit 
 const unsigned long MIC_SETTLE_MS = 30;
 
 const int   BEEP_FLOOR        = 40;    // mic peak-to-peak: ball ON vs OFF
-const unsigned long MIC_WINDOW_US = 2000; // mic sampling window
+// Window must span enough cycles of the beep for a reliable peak-to-peak, and we
+// interleave a mic + an accel read each pass, so 4000us keeps the mic well-sampled and
+// leaves no accelerometer blind spot during the window.
+const unsigned long MIC_WINDOW_US = 4000;
 // How long the beep must stay silent before we call it dead (reject a momentary dropout
 // during impact). Time-based, so it doesn't drift with loop speed.
 const unsigned long BEEP_LOST_MS = 300;
@@ -49,20 +52,21 @@ void setup() {
   Serial.println(F("# millis,hit_count,accel_peak,beeping"));
 }
 
-// Peak-to-peak mic amplitude over a short window.
-int micPeakToPeak() {
-  int lo = 1023, hi = 0;
+// Sample mic AND accelerometer across the window so the accelerometer is never blind
+// while we listen. Returns mic peak-to-peak; writes the max |accel - rest| seen during
+// the window to *accelPeakOut so the caller can still catch a hit that lands here.
+int sampleWindow(int *accelPeakOut) {
+  int lo = 1023, hi = 0, accelPeak = 0;
   unsigned long start = micros();
   while (micros() - start < MIC_WINDOW_US) {
-    int v = analogRead(PIN_MIC);
-    if (v < lo) lo = v;
-    if (v > hi) hi = v;
+    int m = analogRead(PIN_MIC);
+    if (m < lo) lo = m;
+    if (m > hi) hi = m;
+    int d = abs(analogRead(PIN_ACCEL) - ACCEL_REST);
+    if (d > accelPeak) accelPeak = d;
   }
+  *accelPeakOut = accelPeak;
   return hi - lo;
-}
-
-bool isBeeping() {
-  return micPeakToPeak() >= BEEP_FLOOR;
 }
 
 void logRow(unsigned long now, int peak) {
@@ -76,20 +80,17 @@ void loop() {
   unsigned long now = millis();
   int peak = abs(analogRead(PIN_ACCEL) - ACCEL_REST);
 
-  bool countedHit = false;
-  if (peak > HIT_THRESHOLD && (now - lastHitMs) > HIT_DEBOUNCE_MS) {
-    hitCount++;
-    lastHitMs = now;
-    countedHit = true;
-  }
-
-  // Sense the beep only periodically; the mic read blocks ~MIC_WINDOW_US. Skip only the
+  // Sense the beep only periodically; the window blocks ~MIC_WINDOW_US. Skip only the
   // brief MIC_SETTLE_MS impact transient, not the full hit debounce, so a fast/continuous
-  // rig still gets sensing windows between hits.
+  // rig still gets sensing windows between hits. The window samples the accelerometer
+  // too, so a hit landing during it is still caught (no blind spot).
   if (now - lastHitMs > MIC_SETTLE_MS &&
       now - lastMicCheckMs >= MIC_CHECK_INTERVAL_MS) {
     lastMicCheckMs = now;
-    if (isBeeping()) {
+    int windowAccelPeak = 0;
+    int p2p = sampleWindow(&windowAccelPeak);
+    if (windowAccelPeak > peak) peak = windowAccelPeak; // use the larger of the two
+    if (p2p >= BEEP_FLOOR) {
       lastBeepHeardMs = now;
     }
     if (!beepLost && (now - lastBeepHeardMs) >= BEEP_LOST_MS) {
@@ -104,7 +105,10 @@ void loop() {
     }
   }
 
-  if (countedHit) {
+  // Hit detection, using the larger of the per-loop read and any in-window peak.
+  if (peak > HIT_THRESHOLD && (now - lastHitMs) > HIT_DEBOUNCE_MS) {
+    hitCount++;
+    lastHitMs = now;
     logRow(now, peak);
   }
 }
