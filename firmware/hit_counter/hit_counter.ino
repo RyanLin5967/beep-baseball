@@ -93,6 +93,9 @@ void loop() {
       digitalWrite(PIN_LED, HIGH); // latch
       Serial.print(F("# FAILURE at hit "));
       Serial.println(failedAtHit);
+      // Emit a machine-readable row at the failure edge too — failure usually happens
+      // between hits, so a parser must see a beeping=0 data row, not just this comment.
+      logRow(now, peak);
     }
   }
 
