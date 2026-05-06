@@ -17,9 +17,13 @@ def parse(path):
     with open(path, newline="") as f:
         for raw in f:
             line = raw.strip()
-            if not line:
+            if not line or line.startswith("#"):
                 continue
             parts = line.split(",")
+            if len(parts) != 4:
+                # Tolerate stray lines but don't silently miscount — report them.
+                print(f"warning: skipping malformed line: {line!r}", file=sys.stderr)
+                continue
             millis, hit_count, accel_peak, beeping = (int(p) for p in parts)
             hits.append((millis, hit_count, accel_peak, beeping))
     return hits
@@ -33,6 +37,10 @@ def main():
     args = ap.parse_args()
 
     rows = parse(args.log)
+    if not rows:
+        print("ERROR: no data rows parsed — a log with zero rows has not passed.",
+              file=sys.stderr)
+        sys.exit(2)
     total_hits = max(r[1] for r in rows)
     failure = next((r for r in rows if r[3] == 0), None)
 
