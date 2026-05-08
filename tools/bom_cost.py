@@ -40,7 +40,7 @@ def main():
     print(f"priced lines : {n}")
     print(f"total cost   : ${total:.2f}")
     print(f"target       : ${args.target:.2f}")
-    if total >= args.target:
+    if total <= args.target:
         print(f"verdict      : OK (${args.target - total:.2f} under target)")
         sys.exit(0)
     else:
