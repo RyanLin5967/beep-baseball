@@ -10,14 +10,7 @@ Usage:
 import argparse
 import sys
 
-
-def read_rows(path):
-    rows = []
-    with open(path) as f:
-        for line in f:
-            parts = line.strip().split(",")
-            rows.append(tuple(int(p) for p in parts))
-    return rows
+from parse_log import parse  # reuse the same tolerant parser
 
 
 def main():
@@ -36,7 +29,10 @@ def main():
         print("matplotlib not installed: pip install matplotlib", file=sys.stderr)
         sys.exit(2)
 
-    rows = read_rows(args.log)
+    rows = parse(args.log)
+    if not rows:
+        print("no data rows", file=sys.stderr)
+        sys.exit(2)
     hit_counts = [r[1] for r in rows]
     accel = [r[2] for r in rows]
     failure = next((r for r in rows if r[3] == 0), None)
