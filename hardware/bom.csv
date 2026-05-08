@@ -1,0 +1,15 @@
+ref,part,value,notes,qty,unit_cost_usd
+U1,555 timer (CMOS 7555 preferred),TLC555/ICM7555,CMOS runs lower current off CR2032,1,0.20
+R1,resistor,10k,1/8W,1,0.02
+R2,resistor,18k-24k (tune),1/8W; tune to piezo resonance,1,0.02
+C1,capacitor,10nF,timing cap; C0G/NP0 for stability,1,0.05
+C2,capacitor,0.01uF,pin5 control decoupling,1,0.03
+C3,capacitor,0.1uF,VCC decoupling,1,0.03
+LS1,piezo disc,27mm bare element,no internal electronics; drive at resonance,1,0.25
+BT1,coin cell,CR2032 3V,,1,0.35
+H1,coin cell holder,spring-contact SMD/THT holder,"CRITICAL: spring contacts, do NOT solder tabs to raw cell",1,0.30
+W1,wire,30AWG stranded silicone,flexible; service loops at every joint,1,0.10
+-,protoboard or scrap PCB,small,,1,0.20
+-,potting compound,flexible urethane (Smooth-On VytaFlex 30 or similar),"shore ~30A: tough but not brittle",1,0.30
+-,center-suspension foam,open-cell PU foam,crushes progressively to lower peak g,1,0.10
+-,softball,cut/hollowed,the ball body,1,3.50
