@@ -18,8 +18,8 @@ def freq(r1, r2, c1):
 
 
 def solve_r2(f, r1, c1):
-    # f = 1.44 / ((R1 + 2 R2) C1)  ->  R2 = 1.44/(f*C1) - R1
-    return 1.44 / (f * c1) - r1
+    # f = 1.44 / ((R1 + 2 R2) C1)  ->  R2 = (1.44/(f*C1) - R1) / 2
+    return (1.44 / (f * c1) - r1) / 2
 
 
 def main():
